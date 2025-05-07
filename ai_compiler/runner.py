@@ -38,7 +38,7 @@ class Runner:
         else:
             self.exec_config = self._retrive_exec_config()
 
-    def run(self, parameters: dict) -> str:
+    def run(self, parameters: dict, should_force_eval: bool = False) -> str:
         if self._check_executable_state() is not ExecutableState.READY:
             self._recompile()
         docker_client = docker.from_env(base_url=os.getenv("DOCKER_BASE_URL"))
@@ -47,7 +47,7 @@ class Runner:
         need to deal with exceptions here
         """
         eval_task_config = EvalTaskConfig(
-            self.executable_id, exec_result, self._retrive_exec_config()["result_eval_prompt"], False
+            self.executable_id, exec_result, self._retrive_exec_config()["result_eval_prompt"], should_force_eval
         )
         eval_q.put(eval_task_config)
         return exec_result
@@ -75,7 +75,7 @@ class Runner:
         with open(self._get_config_file_path()) as config_file:
             json.dump(self.exec_config, config_file)
 
-    async def _recompile(self):
+    def _recompile(self):
         config = self.exec_config
         config.update({
             "state": ExecutableState.COMPILEING,
@@ -84,3 +84,6 @@ class Runner:
         self._save_exec_config()
         compiler = Compiler(self.executable_id)
         compiler.compile(config)
+        self.run(config["testing_parameters"], should_force_eval=True)
+        config["state"] = ExecutableState.READY
+        self._save_exec_config()

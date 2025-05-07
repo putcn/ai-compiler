@@ -18,7 +18,6 @@ import docker
 from openai import OpenAI
 import tempfile
 import os
-from runner import Runner
 
 class Compiler:
     def __init__(self, executable_id):
@@ -27,7 +26,7 @@ class Compiler:
     def _gen_python_exec(self, exec_config):
         client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("BASE_URL"),
+            base_url=os.getenv("BASE_URL") or "http://172.19.55.202",
         )
         pip_packages = [
             "beautifulsoup4",
@@ -44,7 +43,8 @@ class Compiler:
         this python files result is output to stdout, and the result is a json string in the following example format:
         {exec_config["result_example"]}
         """
-        result = client.chat(
+        result = client.chat.completions.create(
+            model=os.getenv("LLM_MODEL", "qwq"),
             messages=[
                 {"role": "user", "content": prompt},
                 {"role": "system", "content": "you are a python file generator, you generate a single execuable python file as instructed"},
@@ -95,8 +95,3 @@ class Compiler:
         os.remove(temp_file_path)
         os.remove(docker_file_path)
         
-        """
-        step5: run and evaluate the docker image
-        """
-        runner = Runner(self.executable_id)
-        runner.run(exec_config["testing_parameters"])
