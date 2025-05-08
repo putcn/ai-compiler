@@ -18,7 +18,7 @@ import docker
 import dotenv
 import os
 import json
-from evaulator import eval_q, EvalTaskConfig
+from ai_compiler.evaluator import eval_q, EvalTaskConfig
 import time
 from compiler import Compiler
 

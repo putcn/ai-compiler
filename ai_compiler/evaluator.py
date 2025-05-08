@@ -4,6 +4,10 @@ evaluate the output of a compiled executable legitimacy
 import queue
 from threading import Thread
 import random
+from openai import OpenAI
+import os
+import re
+from ai_compiler.llm_client import llmClient
 
 
 class EvalTaskConfig():
@@ -13,13 +17,37 @@ class EvalTaskConfig():
         self.result_eval_prompt = result_eval_prompt
         self.should_force_check = should_force_check
 
-class Evaulator:
+class Evaluator:
     def __init__(self):
         pass
 
     @classmethod
     def eval(cls, result, eval_prompt):
-        return True
+        print("starting eval ...")
+        
+        prompt = f"""
+        the python file execution result is as follows:
+        {result}
+        is the statement below true?
+        {eval_prompt}
+        if the statement is true, please answer with "true", if the statement is false, please answer with "false", and nothing else, no explanation, no comments, no print statements, no markdown
+        """
+        print(f"prompt: {prompt}")
+        response = llmClient.generate(
+            prompt,
+            system_prompt="you are data format inspector",
+            trim_thinking=True,
+            trim_code=False
+        )
+        response = response.lower()
+        print(f"eval response: {response}")
+        # check if the response is true or false
+        if response == "true":
+            return True
+        elif response == "false":
+            return False
+        else:
+            raise ValueError(f"unexpected response: {response}")
 
 """
 create a thread for eval queue

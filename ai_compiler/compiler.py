@@ -18,16 +18,16 @@ import docker
 from openai import OpenAI
 import tempfile
 import os
+import re
+from ai_compiler.evaluator import Evaluator
+from ai_compiler.llm_client import llmClient
 
 class Compiler:
     def __init__(self, executable_id):
         self.executable_id = executable_id
 
-    def _gen_python_exec(self, exec_config):
-        client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("BASE_URL") or "http://172.19.55.202",
-        )
+    def _gen_python_exec(self, exec_config, previous_executable=None, previous_exec_result=None):
+        
         pip_packages = [
             "beautifulsoup4",
             "requests",
@@ -42,56 +42,100 @@ class Compiler:
         {exec_config["python_gen_prompt"]}
         this python files result is output to stdout, and the result is a json string in the following example format:
         {exec_config["result_example"]}
+        make sure you only output the plain python file, and nothing else, no explanation, no comments, no print statements, no markdown, wrap the code in markdown python code block
         """
-        result = client.chat.completions.create(
-            model=os.getenv("LLM_MODEL", "qwq"),
-            messages=[
-                {"role": "user", "content": prompt},
-                {"role": "system", "content": "you are a python file generator, you generate a single execuable python file as instructed"},
-            ],
-            temperature=0.7
-        )
-        return result["choices"][0]["message"]["content"]
+        if previous_executable is not None and previous_exec_result is not None:
+            prompt += f"""
+            the previous python file is as follows:
+            {previous_executable}
 
+            the previous python file execution result is as follows:
+            {previous_exec_result}
+
+            the new python file should be generated based on the previous python file and its execution result, if there is any error in the previous python file, please fix it, and if there is any error in the previous python file execution result, please fix it, and if there is no error in the previous python file and its execution result, please generate a new python file based on the previous python file and its execution result
+            """
+        print(f"prompt: {prompt}")
+        response = llmClient.generate(
+            prompt, 
+            system_prompt="you are a python file generator, you generate a single execuable python file as instructed", 
+            trim_thinking=True,
+            trim_code=True
+        )
+
+        print(f"python file content: {response}")
+        return response
+
+    def compile_once(self, exec_config, previous_executable=None, previous_exec_result=None):
+        
+        
+        python_file_str = self._gen_python_exec(exec_config, previous_executable, previous_exec_result)
+        with tempfile.TemporaryDirectory(delete=False) as temp_dir:
+            """
+            step 1: create python exec file in temp file folder
+            """
+            temp_py_file_path = os.path.join(temp_dir, "main.py")
+            with open(temp_py_file_path, "w") as temp_py_file:
+                temp_py_file.write(python_file_str)
+        
+            print(f"python file created at {temp_py_file_path}")
+            """
+            step2: create docker file in temp folder
+            """
+
+            docker_file_str = f"""
+            FROM ai_compiler_base:latest
+            COPY main.py /app/main.py
+            WORKDIR /app
+            CMD ["python", "main.py"]
+            """
+            temp_dockerfile_path = os.path.join(temp_dir, "Dockerfile")
+            with open(temp_dockerfile_path, "w") as temp_docker_file:
+                temp_docker_file.write(docker_file_str)
+            print(f"docker file created at {temp_dockerfile_path}")
+
+       
+            """
+            step3: build docker image
+            """
+            print("building docker image...")
+            docker_client = docker.DockerClient(base_url=os.getenv("DOCKER_BASE_URL"))
+            docker_client.images.build(
+                path=temp_dir,
+                dockerfile=temp_dockerfile_path,
+                tag=self.executable_id,
+                rm=True,
+            )
+            print(f"docker image {self.executable_id} built")
+       
+        return python_file_str
+    
     def compile(self, exec_config):
-        """
-        step 1: create python exec file in temp file folder
-        """
+        docker_client = docker.DockerClient(base_url=os.getenv("DOCKER_BASE_URL"))
+        print(f"compiling {self.executable_id}...")
+        previous_exec_result = None
+        previous_executable = None
+        eval_result = False
+        while not eval_result:
+            print("previous eval not pass, recompiling...")
+            previous_executable = self.compile_once(exec_config, previous_executable, previous_exec_result)
+            print("python code generated, start test run...")
+            try:
+                previous_exec_result = docker_client.containers.run(
+                    self.executable_id,
+                    environment=exec_config["testing_parameters"],
+                )
+            except docker.errors.ContainerError as e:
+                print(f"docker container run error: {e}")
+                previous_exec_result = e.stderr.decode("utf-8")
+            except Exception as e:
+                print(f"docker container run error: {e}")
+                previous_exec_result = str(e)
+            print(f"test run finished, result: {previous_exec_result}")
+            
+            eval_result = Evaluator.eval(
+                previous_exec_result,
+                exec_config["result_eval_prompt"],
+            )
+            print("eval finished, result: ", eval_result)
         
-        python_file_str = self._gen_python_exec(exec_config)
-        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as temp_file:
-            temp_file.write(python_file_str.encode())
-            temp_file_path = temp_file.name
-        
-        """
-        step2: create docker file in temp file folder
-        """
-
-        docker_file_str = f"""
-        FROM ai_compiler_base:latest
-        COPY {temp_file_path} /app/main.py
-        WORKDIR /app
-        CMD ["python", "main.py"]
-        """
-        with tempfile.NamedTemporaryFile(suffix=".Dockerfile", delete=False) as temp_file:
-            temp_file.write(docker_file_str.encode())
-            docker_file_path = temp_file.name
-        
-        """
-        step3: build docker image
-        """
-
-        docker_client = docker.from_env(base_url=os.getenv("DOCKER_BASE_URL"))
-        docker_client.images.build(
-            path=os.path.dirname(docker_file_path),
-            dockerfile=os.path.basename(docker_file_path),
-            tag=self.executable_id,
-            rm=True,
-        )
-
-        """
-        step4: remove temp files
-        """
-        os.remove(temp_file_path)
-        os.remove(docker_file_path)
         
