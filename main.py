@@ -40,9 +40,9 @@ def test_compiler():
             "PRODUCT_ID"
         ],
         "testing_parameters": {
-            "PRODUCT_ID": "B08N5WRWNW"
+            "PRODUCT_ID": "B002VLZ81M"
         },
-        "result_eval_prompt": "make sure the result is a json string with product name, price, and rating, if not, just return false",
+        "result_eval_prompt": "make sure the result is a json string with product_name, price, and rating, if not, just return false",
         "result_example": "{\"product_name\": \"example product\",\"price\": 19.99,\"rating\": 4.5}"
     }
     print(compiler.compile(exec_config))
