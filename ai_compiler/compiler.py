@@ -31,6 +31,7 @@ class Compiler:
         pip_packages = [
             "beautifulsoup4",
             "requests",
+            "scrapy",
         ]
         prompt = f"""
         the python file generation instruction is as follows:

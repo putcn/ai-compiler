@@ -22,7 +22,7 @@ class LLMClient:
             temperature=temperature
         )
         response = result.choices[0].message.content
-        print(f"llm original response: {response}")
+        print(f"\n --- \n llm original response: {response} \n --- \n")
         if trim_thinking:
             response = self._trim_thinking(response)
         if trim_code:
