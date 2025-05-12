@@ -8,8 +8,8 @@ dotenv.load_dotenv()
 class LLMClient:
     def __init__(self):
         self._openai_client = OpenAI(
-            base_url=os.getenv("BASE_URL") or "http://172.19.55.202",
-            api_key=os.getenv("API_KEY") or "sk-",
+            base_url=os.getenv("BASE_URL"),
+            api_key=os.getenv("OPENAI_API_KEY") or "sk-",
         )
     
     def generate(self, prompt, system_prompt="", trim_thinking=True, trim_code=False, temperature=0.7,):

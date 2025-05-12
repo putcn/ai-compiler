@@ -30,7 +30,7 @@ class Evaluator:
         {result}
         is the statement below true?
         {eval_prompt}
-        if the statement is true, please answer with "true", if the statement is false, please answer with "false", and nothing else, no explanation, no comments, no print statements, no markdown
+        if the statement is true, please answer with "true", if the statement is false, please answer with "false", and nothing else, no explanation, no comments, no print statements, no markdown, no json, no code, no tags, no quotes, no anything else
         """
         print(f"prompt: {prompt}")
         response = llmClient.generate(
