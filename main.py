@@ -7,7 +7,7 @@ example_exec_config = {
         "PRODUCT_ID"
     ],
     "testing_parameters": {
-        "PRODUCT_ID": "B08N5WRWNW"
+        "PRODUCT_ID": "B08YQG1QB6"
     },
     "result_eval_prompt": "make sure the result is a json string with product name, price, and rating, values should be meaningfull values, can not be emplty, n/a or all 0. if it's not valid, just return false",
     "result_example": "{\"product_name\": \"example product\",\"price\": 19.99,\"rating\": 4.5}"
@@ -16,7 +16,7 @@ example_exec_config = {
 def test_runner():
     runner = Runner("amazon_scraper", example_exec_config)
     print(runner.run({
-        "PRODUCT_ID": "B08N5WRWNW"
+        "PRODUCT_ID": "B08YQG1QB6"
     }))
 
 def test_compiler_prompt():

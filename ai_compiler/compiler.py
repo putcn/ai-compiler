@@ -21,6 +21,21 @@ import os
 import re
 from ai_compiler.evaluator import Evaluator
 from ai_compiler.llm_client import llmClient
+import random
+import requests
+
+
+def get_url_content(url:str)->str:
+    headers_list=[
+        {"accept-language": "en-US,en;q=0.9","accept-encoding": "gzip, deflate, br","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36","accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+        {"accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7,zh-TW;q=0.6","accept-encoding": "gzip, deflate, br, zstd","User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36","accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"}
+    ]
+
+    headers = random.choice(headers_list)
+    resp = requests.get(url, headers=headers)
+    if(resp.status_code != 200):
+        return None
+    return resp.text
 
 class Compiler:
     def __init__(self, executable_id):
@@ -33,12 +48,19 @@ class Compiler:
             "requests",
             "scrapy",
         ]
+
+        example_url_content = get_url_content("https://www.amazon.com/dp/B013J7O3X0")
+
+
         prompt = f"""
         the python file generation instruction is as follows:
         the python file execution environment has the following pip packages installed:
         {pip_packages}
         this python file reads the following environment variables as input:
         {exec_config["env_variables"]}
+        there is a utility function called get_url_content(url:str)->str you can import with 'from amazon_utils import get_url_content', with which you can use to get the amazon page html page content, if it returns None, it means the http request failed. the example page content is as follows:
+        {example_url_content}
+
         the python file is to do the following task:
         {exec_config["python_gen_prompt"]}
         this python files result is output to stdout, and the result is a json string in the following example format:

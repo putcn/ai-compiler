@@ -22,7 +22,10 @@ class LLMClient:
             temperature=temperature
         )
         response = result.choices[0].message.content
-        print(f"\n --- \n llm original response: {response} \n --- \n")
+
+        thinking_search = re.search(r"<think>(.*?)</think>", response, flags=re.DOTALL)
+        if thinking_search:
+            print(thinking_search.group(1))
         if trim_thinking:
             response = self._trim_thinking(response)
         if trim_code:
