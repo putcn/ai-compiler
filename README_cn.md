@@ -4,6 +4,8 @@ AI-Compiler项目的灵感源自于使用apify.com, apify上有很多失效的�
 
 把这件事推广一下的话, 很多过去使用llm来解决的问题(比如整理固定格式的数据等)其实是可以用生成python脚本去运行的方式去解决, 这样就减少了系统的消耗. 
 
+llm编程可能并不是解决所有问题的灵丹妙药, 但是如果我们把问题聚焦在某些特定的场景下, 还是可以让事情变得更高效, 让人类的工作量减少.
+
 ![alt text](image.png)
 
 目前实现了AI compile的过程, 可以通过用户的prompt生成python, 然后打包进docker, 之后运行测试数据, 验证结果. 如果验证失败就会把上轮的结果和代码一起发给下一轮compile的过程, 直到结果数据验证成功. 
@@ -25,3 +27,11 @@ AI-Compiler项目的灵感源自于使用apify.com, apify上有很多失效的�
 同时在生成docker的时候, 把这么个util funciton也打包到docker里面, 让生成的python程序可以调用到.
 
 这个机制从理论上应该是可行的, 但是在本地运行环境中遇到了llm的上下文窗口长度问题, 导致生成的python代码完全不是解析的代码. 这事目前还没好的方案, 除非能让llm上下文窗口够大.
+
+
+## Demo
+
+确保系统中有docker和python3.8以上的环境, 并根据操作系统更新.env中dockersocket的配置.
+
+- pip install -r requirements.txt
+- python main.py

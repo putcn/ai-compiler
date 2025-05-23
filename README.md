@@ -1,3 +1,5 @@
+# AI-Compiler
+
 The AI-Compiler project is inspired by the challenges of maintaining web crawlers on platforms like Apify.com, where many crawlers become obsolete. In theory, repairing these crawlers (e.g., adjusting CSS selectors when webpage HTML structures change) should be straightforward. However, without proactive monitoring, failures persist. AI could automate this process by periodically validating crawler outputs and self-correcting errors through iterative code adjustments.
 
 Furthermore, many light and deterministic tasks currently handled by LLMs (e.g., formatting structured data) could instead be compiled into AI-generated Python scripts or even binaries and run them instead, reducing computational overhead.
@@ -19,7 +21,9 @@ Recompiles with error feedback until validation succeeds
 
 Key Issue: The compilation falls in to the compile, not passing evaluation, recompile loop. My guess is: LLMs (tested with local Qwen-32B and OpenAI's GPT-4o) modify code randomly without understanding root causes. Only with the validation output is not good enough for effective fixes.
 
-May 13, 2025 Update
+---
+5/13/2025 update:
+The
 Revised Approach:
 
 After thinking carefully about the code generation process, when the AI generates parsing code, it actually doesn't know what the Amazon page's HTML looks like, so the generated parsing code is completely a gussing work. Similar situations may also occur in other API request processes if the API does not provide detailed structured documentation to the AI model.
@@ -31,3 +35,11 @@ The current simple approach is to directly write a function to fetch the Amazon 
 At the same time, when generating the Docker, this util function is also packaged into the Docker, so that the generated Python program can call it.
 
 In theory, this mechanism should work, but in the local runtime environment, there is an issue with the LLM's context window length, the source html is too long, it diluted the context and prompt, if I split it into pieces and use vector searching, the retrieval is not accurate enough. There is currently no good solution for this, unless the LLM's context window can be made large enough. Project Onhold.
+
+
+## Demo
+
+make sure you have docker and python 3.8+, and update the .env with the docker socket config according to your OS.
+
+- pip install -r requirements.txt
+- python main.py
