@@ -1,27 +1,33 @@
-# AI-Compiler
+The AI-Compiler project is inspired by the challenges of maintaining web crawlers on platforms like Apify.com, where many crawlers become obsolete. In theory, repairing these crawlers (e.g., adjusting CSS selectors when webpage HTML structures change) should be straightforward. However, without proactive monitoring, failures persist. AI could automate this process by periodically validating crawler outputs and self-correcting errors through iterative code adjustments.
 
-AI-Compiler项目的灵感源自于使用apify.com, apify上有很多失效的爬虫. 这些爬虫理论上应该很容易维护, 比如由于原网页html结构变了, 那么一些数据的爬取想要修复只需要修改一些css selector就可以做到. 这种事如果没有人来发现问题, 就没有办法继续工作. 但是这件事理论上对AI来讲是很简单的, 只需要偶尔验证一下运行结果, 发现错误的话, 让ai自己的去修复就好. 
+Furthermore, many light and deterministic tasks currently handled by LLMs (e.g., formatting structured data) could instead be compiled into AI-generated Python scripts or even binaries and run them instead, reducing computational overhead.
 
-把这件事推广一下的话, 很多过去使用llm来解决的问题(比如整理固定格式的数据等)其实是可以用生成python脚本去运行的方式去解决, 这样就减少了系统的消耗. 
+LLM coding may not be the silver bullet for all tasks, but if we focus on specific use cases, we can still make things more efficient and need less human effort.
 
 ![alt text](image.png)
 
-目前实现了AI compile的过程, 可以通过用户的prompt生成python, 然后打包进docker, 之后运行测试数据, 验证结果. 如果验证失败就会把上轮的结果和代码一起发给下一轮compile的过程, 直到结果数据验证成功. 
+Current Implementation
+The system:
 
-目前碰到的问题是: 循环compile, python代码虽然不断地被修改, 但是一直无法满足evaluation的条件. 尝试了使用本地qwen32b和openai的4o都无法解决. 猜想是因为evaluatino只验证结果, 但是代码的修改是需要基于debug的过程, 如果无法分析到问题的源头, 那么llm也就只能瞎改, 无法真正解决问题. 
+Generates Python code from user prompts
 
-目前项目先暂停, 等有好的方法或者模型再继续. 
+Packages it into Docker containers
 
+Runs test data validation
 
----
-5/13/2025 update:
+Recompiles with error feedback until validation succeeds
 
-仔细想了下代码生成的过程, 在ai生成解析代码的时候, 它并不知道具体亚马逊页面的html是什么样子, 所以生成的解析代码是完全没有根据的. 类似的情况也可能会出现在其他的api请求过程中, 如果api没有详细的结构化文档喂给AI模型的话.
+Key Issue: The compilation falls in to the compile, not passing evaluation, recompile loop. My guess is: LLMs (tested with local Qwen-32B and OpenAI's GPT-4o) modify code randomly without understanding root causes. Only with the validation output is not good enough for effective fixes.
 
-那么这里的理想的处理方式是把问题拆分, 1. 保证能够稳定的获取页面内容; 2. 解析页面. 这两个问题都分别需要ai compiler去生成相应的可执行文件/docker. 但是这又需要建立可执行文件的流水线机制. 这样机制的建立需要把可执行docker变成服务的docker, 这里又牵扯到服务隔离的问题. 那么目前看起来并不必要做到这么复杂. 
+May 13, 2025 Update
+Revised Approach:
 
-目前的简单做法是直接写一个获取亚马逊页面的function, compile的时候获取内容, 并把页面内容作为prompt的一部分传给llm, 让llm去写解析的代码.
+After thinking carefully about the code generation process, when the AI generates parsing code, it actually doesn't know what the Amazon page's HTML looks like, so the generated parsing code is completely a gussing work. Similar situations may also occur in other API request processes if the API does not provide detailed structured documentation to the AI model.
 
-同时在生成docker的时候, 把这么个util funciton也打包到docker里面, 让生成的python程序可以调用到.
+The ideal approach here is to break down the problem: 1. Ensure stable retrieval of page content; 2. Parse the page. Both of these tasks require the AI compiler to generate corresponding executable files/Docker containers. However, this would require establishing a pipeline mechanism for executable files. Setting up such a mechanism would mean turning the executable Docker into a service Docker, which brings up the issue of service isolation. At present, it doesn't seem necessary to make things so complicated.
 
-这个机制从理论上应该是可行的, 但是在本地运行环境中遇到了llm的上下文窗口长度问题, 导致生成的python代码完全不是解析的代码. 这事目前还没好的方案, 除非能让llm上下文窗口够大.
+The current simple approach is to directly write a function to fetch the Amazon page, retrieve the content during compilation, and include the page content as part of the prompt to the LLM, letting the LLM write the parsing code.
+
+At the same time, when generating the Docker, this util function is also packaged into the Docker, so that the generated Python program can call it.
+
+In theory, this mechanism should work, but in the local runtime environment, there is an issue with the LLM's context window length, the source html is too long, it diluted the context and prompt, if I split it into pieces and use vector searching, the retrieval is not accurate enough. There is currently no good solution for this, unless the LLM's context window can be made large enough. Project Onhold.
